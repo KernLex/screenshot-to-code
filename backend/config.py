@@ -5,6 +5,9 @@ import os
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", None)
 
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", None)
+
+
 # Debugging-related
 
 SHOULD_MOCK_AI_RESPONSE = bool(os.environ.get("MOCK", False))

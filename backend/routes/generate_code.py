@@ -2,13 +2,14 @@ import os
 import traceback
 from fastapi import APIRouter, WebSocket
 import openai
-from config import ANTHROPIC_API_KEY, IS_PROD, SHOULD_MOCK_AI_RESPONSE
+from config import ANTHROPIC_API_KEY, GEMINI_API_KEY, IS_PROD, SHOULD_MOCK_AI_RESPONSE
 from custom_types import InputMode
 from llm import (
     Llm,
     convert_frontend_str_to_llm,
     stream_claude_response,
     stream_claude_response_native,
+    stream_gemini_response,
     stream_openai_response,
 )
 from openai.types.chat import ChatCompletionMessageParam
@@ -244,6 +245,19 @@ async def stream_code(websocket: WebSocket):
                 completion = await stream_claude_response(
                     prompt_messages,  # type: ignore
                     api_key=ANTHROPIC_API_KEY,
+                    callback=lambda x: process_chunk(x),
+                )
+                exact_llm_version = code_generation_model
+            elif code_generation_model == Llm.GEMINI:
+                if not GEMINI_API_KEY:
+                    await throw_error(
+                        "No Gemini API key found. Please add the environment variable GEMINI_API_KEY to backend/.env"
+                    )
+                    raise Exception("No Gemini key")
+
+                completion = await stream_gemini_response(
+                    prompt_messages,  
+                    api_key=GEMINI_API_KEY,
                     callback=lambda x: process_chunk(x),
                 )
                 exact_llm_version = code_generation_model

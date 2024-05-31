@@ -6,6 +6,7 @@ export enum Stack {
   VUE_TAILWIND = "vue_tailwind",
   IONIC_TAILWIND = "ionic_tailwind",
   SVG = "svg",
+  REACT_ANTD_TAILWIND = "react_antd_tailwind",
 }
 
 export const STACK_DESCRIPTIONS: {
@@ -17,4 +18,5 @@ export const STACK_DESCRIPTIONS: {
   vue_tailwind: { components: ["Vue", "Tailwind"], inBeta: true },
   ionic_tailwind: { components: ["Ionic", "Tailwind"], inBeta: true },
   svg: { components: ["SVG"], inBeta: true },
+  react_antd_tailwind: { components: ["React", "Ant Design", "Tailwind"], inBeta: false },
 };

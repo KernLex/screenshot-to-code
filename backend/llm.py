@@ -5,6 +5,7 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from config import IS_DEBUG_ENABLED
 from debug.DebugFileWriter import DebugFileWriter
+import google.generativeai as genai   
 
 from utils import pprint_prompt
 
@@ -17,6 +18,7 @@ class Llm(Enum):
     CLAUDE_3_SONNET = "claude-3-sonnet-20240229"
     CLAUDE_3_OPUS = "claude-3-opus-20240229"
     CLAUDE_3_HAIKU = "claude-3-haiku-20240307"
+    GEMINI = "gemini-1.5-pro-latest"
 
 
 # Will throw errors if you send a garbage string
@@ -215,3 +217,85 @@ async def stream_claude_response_native(
         raise Exception("No HTML response found in AI response")
     else:
         return response.content[0].text
+
+async def stream_gemini_response(
+    messages: List[ChatCompletionMessageParam],
+    api_key: str,
+    callback: Callable[[str], Awaitable[None]],
+) -> str:
+    """
+    This function streams the Gemini response by generating content based on the given messages.
+    
+    Parameters:
+        messages (List[ChatCompletionMessageParam]): A list of chat completion messages.
+        api_key (str): The API key for the Gemini model.
+        callback (Callable[[str], Awaitable[None]]): A callback function to handle the generated content.
+        
+    Returns:
+        str: The generated response text.
+    """
+    genai.configure(api_key=api_key)
+    
+    generation_config = genai.GenerationConfig(
+        temperature=0.0
+    )
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-pro-latest",
+        generation_config=generation_config
+    )
+    contents = parse_openai_to_gemini_prompt(messages)
+    
+    response = model.generate_content(
+        contents=contents,
+        stream=True,
+    )
+    
+    for chunk in response:
+        content = chunk.text or ""
+        await callback(content)
+    
+    if not response:
+        raise Exception("No HTML response found in AI response")
+    else:
+        return response.text
+
+
+def parse_openai_to_gemini_prompt(prompts):
+    """
+    Parses the OpenAI prompt into the Gemini format.
+
+    Args:
+        prompts (list): A list of prompts in the OpenAI format.
+
+    Returns:
+        list: A list of messages in the Gemini format.
+    """
+    messages = []
+    for prompt in prompts:
+        message = {}
+        message['role'] = prompt['role']
+        if prompt['role'] == 'system':
+            message['role'] = 'user'
+        if prompt['role'] == 'assistant':
+            message['role'] = 'model'
+        message['parts'] = []
+        content = prompt['content']
+        if isinstance(content, list):
+            for content in prompt['content']:
+                part = {}
+                if content['type'] == 'image_url':
+                    base64 = content['image_url']['url']
+                    part['inline_data'] = {
+                        'data': base64.split(",")[1],
+                        'mime_type': base64.split(";")[0].split(":")[1]
+                    }
+                elif content['type'] == 'text':
+                    part['text'] = content['text']
+                message['parts'].append(part)
+        else:
+            message['parts'] = [content]
+        messages.append(message)
+    return messages
+
+
+
